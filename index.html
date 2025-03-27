@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatiyana - Real-time Chat</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #121212;
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #chat-container {
+            width: 90%;
+            max-width: 400px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        #messages {
+            height: 350px;
+            overflow-y: auto;
+            border-radius: 10px;
+            padding: 10px;
+            background: #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .message {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .sent {
+            background: #007bff;
+            align-self: flex-end;
+            color: white;
+        }
+        .received {
+            background: #444;
+            align-self: flex-start;
+            color: white;
+        }
+        input {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 20px;
+            background: #333;
+            color: white;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: #007bff;
+            color: white;
+            font-size: 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h2>Chatiyana</h2>
+        <label for="userId">Your User ID:</label>
+        <input type="text" id="userId" placeholder="Enter your ID">
+        <button onclick="joinChat()">Join</button>
+
+        <div id="chatbox" class="hidden">
+            <h3>Chat</h3>
+            <div id="messages"></div>
+            <input type="text" id="receiverId" placeholder="Receiver ID">
+            <input type="text" id="message" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io("http://localhost:5001");
+        let userId;
+
+        function joinChat() {
+    userId = document.getElementById("userId").value;
+    const username = prompt("Enter your name:"); // Ask for the username
+
+    if (!userId || !username) return alert("Please enter both User ID and Name!");
+
+    socket.emit("join", { userId, username });
+    document.getElementById("chatbox").classList.remove("hidden");
+}
+
+
+        function sendMessage() {
+            const receiverId = document.getElementById("receiverId").value.trim();
+            const message = document.getElementById("message").value.trim();
+            
+            if (!receiverId || !message) return alert("Fill in all fields!");
+            
+            socket.emit("sendMessage", { sender: userId, receiver: receiverId, message });
+            displayMessage(userId, message, true);
+            document.getElementById("message").value = "";
+        }
+
+        socket.on("receiveMessage", (data) => {
+    console.log("📥 New message received:", data);  // Debugging Log
+    displayMessage(data.sender, data.message, false);
+});
+socket.on("previousMessages", (messages) => {
+    console.log("📥 Loaded previous messages:", messages);
+    messages.forEach((msg) => {
+        displayMessage(msg.sender, msg.message, msg.sender === userId);
+    });
+});
+
+
+function displayMessage(sender, message, isSent, senderName = "Unknown") {
+    const msgBox = document.getElementById("messages");
+    const msgDiv = document.createElement("div");
+    
+    msgDiv.classList.add("message", isSent ? "sent" : "received");
+    msgDiv.innerHTML = `<strong>${senderName}:</strong> ${message}`;
+    
+    msgBox.appendChild(msgDiv);
+    msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+// When receiving messages, display sender's name
+socket.on("receiveMessage", (data) => {
+    displayMessage(data.sender, data.message, false, data.senderName);
+});
+
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
