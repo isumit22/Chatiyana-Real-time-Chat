@@ -101,13 +101,14 @@
 
         function joinChat() {
     userId = document.getElementById("userId").value;
-    const username = prompt("Enter your name:"); // Ask for the username
+    if (!userId) return alert("Please enter your User ID!");
 
-    if (!userId || !username) return alert("Please enter both User ID and Name!");
-
+    const username = prompt("Enter your Name:");
     socket.emit("join", { userId, username });
+
     document.getElementById("chatbox").classList.remove("hidden");
 }
+
 
 
         function sendMessage() {
